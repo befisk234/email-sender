@@ -30,11 +30,12 @@ async def send_email(req: EmailRequest):
     try:
         resend.Emails.send({
             "from": FROM_EMAIL,
-            "to": req.to,
+            "to": [req.to],
             "subject": req.subject,
             "text": req.body,
         })
     except Exception as e:
+        print(f"Error sending email: {e}")
         raise HTTPException(status_code=502, detail=f"Failed to send email: {str(e)}")
 
     return {"status": "ok"}
