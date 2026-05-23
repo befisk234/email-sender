@@ -1,6 +1,5 @@
 import os
-import smtplib
-from email.mime.text import MIMEText
+import resend
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -11,10 +10,8 @@ load_dotenv()
 
 app = FastAPI()
 
-GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD")
-FROM_EMAIL = "braydenfisk@gmail.com"
-SMTP_HOST = "smtp.gmail.com"
-SMTP_PORT = 587
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
+FROM_EMAIL = "onboarding@resend.dev"
 
 
 class EmailRequest(BaseModel):
@@ -25,19 +22,18 @@ class EmailRequest(BaseModel):
 
 @app.post("/send-email")
 async def send_email(req: EmailRequest):
-    if not GMAIL_APP_PASSWORD:
-        raise HTTPException(status_code=500, detail="GMAIL_APP_PASSWORD is not configured.")
+    if not RESEND_API_KEY:
+        raise HTTPException(status_code=500, detail="RESEND_API_KEY is not configured.")
 
-    msg = MIMEText(req.body)
-    msg["Subject"] = req.subject
-    msg["From"] = FROM_EMAIL
-    msg["To"] = req.to
+    resend.api_key = RESEND_API_KEY
 
     try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.starttls()
-            server.login(FROM_EMAIL, GMAIL_APP_PASSWORD)
-            server.sendmail(FROM_EMAIL, req.to, msg.as_string())
+        resend.Emails.send({
+            "from": FROM_EMAIL,
+            "to": req.to,
+            "subject": req.subject,
+            "text": req.body,
+        })
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Failed to send email: {str(e)}")
 
